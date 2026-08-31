@@ -15,7 +15,7 @@
     "src"
   ],
   "scripts": {
-    "test": "node --test \"test/*.test.mjs\"",
+    "test": "node --test test/verifier.test.mjs test/browser-safety.test.mjs",
     "typecheck": "tsc --noEmit --allowJs --checkJs --target es2022 --module nodenext --strict test/types-smoke.ts"
   },
   "repository": {
