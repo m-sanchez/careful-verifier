@@ -102,7 +102,7 @@ test('least-frequent ranking is an honest cannot-execute, as recorded', () => {
   assert.match(result.answer, /declined, not guessed/);
 });
 
-test('a forged count is struck at the clerk and the loop’s own count ships', () => {
+test("a forged count is struck at the clerk and the loop's own count ships", () => {
   const result = runCareful(QUESTION, draft(), rows, { forgedCount: 999 });
   const clerk = result.checkpoints.find((k) => k.station === 'CLERK');
   assert.equal(clerk.status, 'warn');

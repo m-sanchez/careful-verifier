@@ -10,8 +10,8 @@ the browser. No model calls.
 This is the deterministic side of the careful-machine pattern, extracted as a
 library. A model may draft a *reading* of a question; this code decides what
 that draft is allowed to become. Every draft passes through a station
-pipeline — VALIDATOR → GATE → SCOPE → REGISTRY → EVIDENCE → CLERK → ANSWER →
-REPLAY — and comes out the other side as checkpoints, a coverage record, a
+pipeline (VALIDATOR → GATE → SCOPE → REGISTRY → EVIDENCE → CLERK → ANSWER →
+REPLAY) and comes out the other side as checkpoints, a coverage record, a
 claims ledger (certified or struck, in writing), and a disposition with a
 path to yes. Refusal is a routed outcome, not a failure.
 
@@ -51,7 +51,7 @@ and a disposition derived from records only.
 ## The tests are the point
 
 `test/verifier.test.mjs` pins the verifier's arithmetic to the answer key of
-five recorded live runs (`data/cases.json` — a real model answering the same
+five recorded live runs (`data/cases.json`: a real model answering the same
 question through this pipeline, frozen). Highlights:
 
 | Test | Claim |
