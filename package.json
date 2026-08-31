@@ -1,0 +1,38 @@
+{
+  "name": "careful-verifier",
+  "version": "1.0.0",
+  "description": "Models propose, code certifies. Zero-dependency claim verifier for Node and the browser - no model calls.",
+  "type": "module",
+  "main": "./src/verifier.mjs",
+  "types": "./src/verifier.d.mts",
+  "exports": {
+    ".": {
+      "types": "./src/verifier.d.mts",
+      "default": "./src/verifier.mjs"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m-sanchez/careful-verifier.git"
+  },
+  "homepage": "https://miguelsanchez.co.uk/careful-machine",
+  "author": "Miguel Sanchez <contact@miguelsanchez.co.uk>",
+  "license": "MIT",
+  "keywords": [
+    "llm",
+    "verification",
+    "guardrails",
+    "evals",
+    "ai-safety",
+    "deterministic"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
