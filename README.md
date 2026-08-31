@@ -1,5 +1,12 @@
 # careful-verifier
 
+![JavaScript](https://img.shields.io/badge/JavaScript-JSDoc_typed-F7DF1E?logo=javascript&logoColor=black)
+![Node](https://img.shields.io/badge/node-%3E%3D18-5FA04E?logo=nodedotjs&logoColor=white)
+![Browser](https://img.shields.io/badge/browser-no_framework-6E6E6E)
+![Dependencies](https://img.shields.io/badge/dependencies-0-B45309)
+![Tests](https://img.shields.io/badge/tests-12_passing-2F6F44)
+![License](https://img.shields.io/badge/license-MIT-6E6E6E)
+
 Models propose, code certifies. A zero-dependency claim verifier for Node and
 the browser. No model calls.
 
