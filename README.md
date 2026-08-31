@@ -4,7 +4,7 @@
 ![Node](https://img.shields.io/badge/node-%3E%3D18-5FA04E?logo=nodedotjs&logoColor=white)
 ![Browser](https://img.shields.io/badge/browser-no_framework-6E6E6E)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-B45309)
-![Tests](https://img.shields.io/badge/tests-12_passing-2F6F44)
+[![CI](https://github.com/m-sanchez/careful-verifier/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/careful-verifier/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
 
 Models propose, code certifies. A zero-dependency claim verifier for Node and
@@ -25,15 +25,28 @@ path to yes. Refusal is a routed outcome, not a failure.
 It powers the [live tamper bench](https://miguelsanchez.co.uk/careful-machine):
 visitors mutate a model draft in the browser and watch the same code catch it.
 
-## Run
+## Install
 
 ```bash
-npm test        # node's built-in runner; no dependencies at all
+npm install github:m-sanchez/careful-verifier#v1.0.1
 ```
 
-Node 18+. The library is plain JS with JSDoc types (`src/verifier.d.mts`
-carries the declarations), so it runs untranspiled in Node and bundles clean
-for the browser.
+Not yet on npm; the pinned git tag is the supported install (plain
+JavaScript, node 18+) and CI proves the packed tarball imports cleanly.
+
+## Develop
+
+```bash
+npm ci          # dev-only: typescript, for the declaration drift check
+npm test
+npm run typecheck
+```
+
+The library is plain JS with JSDoc types (`src/verifier.d.mts` carries the
+declarations, and a compile-only smoke pins them to the real surface). The
+"browser" claim is proven at the level it can be here: the import graph is
+empty and the module loads from a data: URL, so any ES-module environment
+can run it; the in-browser deployment is the live tamper bench.
 
 ## Use
 

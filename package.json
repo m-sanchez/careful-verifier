@@ -1,6 +1,6 @@
 {
   "name": "careful-verifier",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Models propose, code certifies. Zero-dependency claim verifier for Node and the browser - no model calls.",
   "type": "module",
   "main": "./src/verifier.mjs",
@@ -15,7 +15,8 @@
     "src"
   ],
   "scripts": {
-    "test": "node --test \"test/*.test.mjs\""
+    "test": "node --test \"test/*.test.mjs\"",
+    "typecheck": "tsc --noEmit --allowJs --checkJs --target es2022 --module nodenext --strict test/types-smoke.ts"
   },
   "repository": {
     "type": "git",
@@ -34,5 +35,8 @@
   ],
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
   }
 }
