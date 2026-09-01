@@ -7,6 +7,8 @@
 [![CI](https://github.com/m-sanchez/careful-verifier/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/careful-verifier/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
 
+> **In plain English:** a referee that re-checks an AI's work with plain rules and no AI involved, so the checker cannot be fooled the same way the model was.
+
 Models propose, code certifies. A zero-dependency claim verifier for Node and
 the browser. No model calls.
 
