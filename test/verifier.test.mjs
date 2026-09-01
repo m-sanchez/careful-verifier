@@ -123,12 +123,13 @@ test('a capped read degrades honestly: unqualified claim struck, qualified form 
   assert.equal(result.answer, 'most frequent payee within the examined rows: Alder Logistics (340 of the rows read)');
 });
 
-test('a widened window just recomputes honestly', () => {
+test('a widened window recomputes, and the claim says which window it covers', () => {
   const d = draft();
   d.window.from = '2025-01-01';
   const result = runCareful(QUESTION, d, rows);
   assert.equal(result.coverage.populationCount, rows.length);
-  assert.equal(result.answer, 'most frequent payee this quarter: Marram Freight (670 payments)');
+  // the deployment's word for its own window is not available to a wider read
+  assert.equal(result.answer, 'most frequent payee 2025-01-01..2025-07-04: Marram Freight (670 payments)');
   const read = computeRead(rows, { from: '2025-01-01', to: WINDOW.to });
   assert.deepEqual(read.seenBefore, []);
   assert.equal(read.counts.find((c) => c.name === 'Quayside Marine').n, 126);

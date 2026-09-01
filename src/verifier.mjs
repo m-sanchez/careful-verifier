@@ -20,7 +20,18 @@
  * @typedef {{ station: string, status: 'pass' | 'warn' | 'stop', detail: string, chapter?: string, catch?: Catch, climax?: boolean }} Checkpoint
  * @typedef {{ assertion: string, coverageClaimed: 'complete' | 'partial', outcome: 'certified' | 'struck', failingCheck?: string }} LedgerClaim
  * @typedef {{ itemsRead?: number, populationCount: number }} ReadRecord
- * @typedef {{ cap?: number | null, forgedCount?: number | null, read?: ReadRecord | null, standing?: string }} RunOptions
+ * @typedef {{ kind: string, direction?: string, certifies: boolean, label?: string }} RegisteredOp
+ * @typedef {{
+ *   clock?: string,
+ *   subjects: string[],
+ *   sources: string[],
+ *   askKinds: string[],
+ *   cap?: number,
+ *   window?: { from: string, to: string, label: string },
+ *   ops: RegisteredOp[],
+ *   vocabulary: { entity: string, unit: string }
+ * }} Deployment
+ * @typedef {{ cap?: number | null, forgedCount?: number | null, read?: ReadRecord | null, standing?: string, deployment?: Deployment }} RunOptions
  * @typedef {{
  *   attempt: { verdict: 'accepted' | 'rejected', reason?: string },
  *   contract: Draft | null,
@@ -34,22 +45,91 @@
  * }} RunResult
  */
 
-/** The recorded deployment, verbatim: what this build may touch and do. */
+/**
+ * The recorded deployment, verbatim: what that build may touch and do. It is
+ * the default, not the only one - every station reads the deployment it was
+ * handed, so a caller in another domain passes `{ deployment }` and gets the
+ * same records in its own vocabulary. test/fixtures/support-desk.mjs is a
+ * second, non-payments deployment proving exactly that.
+ * @type {Deployment}
+ */
 export const DEPLOYMENT = {
   clock: '2025-07-04',
   subjects: ['acct-1187'],
   sources: ['payments'],
   askKinds: ['total', 'ranking', 'presence', 'first-appearance'],
   cap: 500,
+  /** The window this build's records cover, and what the requester calls it.
+   * The certified claim borrows the label only for exactly this window; any
+   * other window is named by its dates, so the assertion text cannot outrun
+   * the read. */
+  window: { from: '2025-04-01', to: '2025-07-04', label: 'this quarter' },
   /** The registry, declared: what this build can do, and whether doing it
    * certifies a claim. `certifies: false` means the ask is recorded and
    * nothing more - the run may not speak it. Anything absent is capability
    * this build does not have and will not invent. */
   ops: [
-    { kind: 'ranking', direction: 'most', certifies: true },
+    { kind: 'ranking', direction: 'most', certifies: true, label: 'rank most-frequent' },
     { kind: 'presence', certifies: false }
-  ]
+  ],
+  /** What a ranked thing is called here, and what is being counted. */
+  vocabulary: { entity: 'payee', unit: 'payments' }
 };
+
+/**
+ * Reject, never repair, applied to the deployment itself: a build that cannot
+ * say what it may touch, what it can do, or what its claims are about has no
+ * business certifying anything.
+ * @param {Deployment | undefined | null} d
+ * @returns {Deployment}
+ */
+function resolveDeployment(d) {
+  if (d == null) return DEPLOYMENT;
+  if (typeof d !== 'object') throw new Error('deployment must be an object');
+  for (const key of ['subjects', 'sources', 'askKinds', 'ops']) {
+    if (!Array.isArray(/** @type {Record<string, unknown>} */ (d)[key])) {
+      throw new Error(`deployment.${key} must be an array`);
+    }
+  }
+  const v = d.vocabulary;
+  if (typeof v !== 'object' || v === null || typeof v.entity !== 'string' || typeof v.unit !== 'string') {
+    throw new Error('deployment.vocabulary must name an entity and a unit');
+  }
+  for (const op of d.ops) {
+    if (typeof op.kind !== 'string' || typeof op.certifies !== 'boolean') {
+      throw new Error('every deployment.ops entry needs a kind and a certifies flag');
+    }
+  }
+  return d;
+}
+
+/**
+ * How a window is named in a certified claim. The deployment's own label is
+ * borrowed only for the deployment's own window; anything else is named by
+ * its dates, so a widened read cannot keep the narrower word.
+ * @param {Deployment} deployment
+ * @param {{ from: string, to: string }} window
+ */
+function periodLabel(deployment, window) {
+  const w = deployment.window;
+  return w != null && w.from === window.from && w.to === window.to ? w.label : `${window.from}..${window.to}`;
+}
+
+/**
+ * The claim wording, derived: what was ranked, over which window, in this
+ * deployment's vocabulary. The partial form names no period at all - it can
+ * only speak for the rows it read.
+ * @param {Deployment} deployment
+ * @param {{ from: string, to: string }} window
+ * @param {{ name: string, n: number }} top
+ * @param {'complete' | 'partial'} form
+ */
+function rankedClaim(deployment, window, top, form) {
+  const { entity, unit } = deployment.vocabulary;
+  return form === 'partial'
+    ? `most frequent ${entity} within the examined rows: ${top.name} (${top.n} of the rows read)`
+    : `most frequent ${entity} ${periodLabel(deployment, window)}: ${top.name} (${top.n} ${unit})`;
+}
 
 /**
  * Which declared operation, if any, covers an ask. An op with no direction
@@ -191,9 +271,10 @@ export function computeRead(rows, window, cap = null, declared = null) {
  * requester's verbatim words.
  * @param {unknown} draft
  * @param {string} question
+ * @param {Deployment} [deployment] defaults to the recorded payments deployment
  * @returns {{ verdict: 'accepted' | 'rejected', reason?: string }}
  */
-export function validateDraft(draft, question) {
+export function validateDraft(draft, question, deployment = DEPLOYMENT) {
   /** @param {string} reason */
   const reject = (reason) => ({ verdict: /** @type {const} */ ('rejected'), reason });
   if (typeof draft !== 'object' || draft === null) return reject('draft is not an object');
@@ -212,7 +293,7 @@ export function validateDraft(draft, question) {
   for (const raw of asks) {
     const a = /** @type {Record<string, unknown>} */ (raw);
     if (typeof a !== 'object' || a === null) return reject('an ask is not an object');
-    if (typeof a.kind !== 'string' || !DEPLOYMENT.askKinds.includes(a.kind)) {
+    if (typeof a.kind !== 'string' || !deployment.askKinds.includes(a.kind)) {
       return reject(`ask kind "${String(a.kind)}" is not in the schema`);
     }
     if (a.kind === 'ranking' && a.direction !== 'most' && a.direction !== 'least') {
@@ -256,6 +337,7 @@ export function runCareful(question, draft, rows, opts = {}) {
   const cap = opts.cap ?? null;
   const forgedCount = opts.forgedCount ?? null;
   const declaredRead = opts.read ?? null;
+  const deployment = resolveDeployment(opts.deployment);
   // standing is a record of how this reading was admitted, not a literal:
   // the recorded runs carry both policy-admitted and requester-confirmed
   const standing = opts.standing ?? 'policy-admitted';
@@ -269,7 +351,7 @@ export function runCareful(question, draft, rows, opts = {}) {
   const quarantined = Array.isArray(draft?.unclaimedText) ? [...draft.unclaimedText] : [];
 
   // VALIDATOR - reject, never repair
-  const attempt = validateDraft(draft, question);
+  const attempt = validateDraft(draft, question, deployment);
   if (attempt.verdict === 'rejected') {
     checkpoints.push({
       station: 'VALIDATOR',
@@ -339,8 +421,8 @@ export function runCareful(question, draft, rows, opts = {}) {
   });
 
   // SCOPE - authority is a record; a wider read never happens
-  const badSubjects = draft.subjects.filter((s) => !DEPLOYMENT.subjects.includes(s));
-  const badSources = draft.sources.filter((s) => !DEPLOYMENT.sources.includes(s));
+  const badSubjects = draft.subjects.filter((s) => !deployment.subjects.includes(s));
+  const badSources = draft.sources.filter((s) => !deployment.sources.includes(s));
   if (badSubjects.length > 0 || badSources.length > 0) {
     const offending = badSubjects.length > 0 ? `subjects [${badSubjects.join(', ')}]` : `sources [${badSources.join(', ')}]`;
     checkpoints.push({
@@ -351,7 +433,7 @@ export function runCareful(question, draft, rows, opts = {}) {
       catch: {
         kind: 'scope-conflict',
         artifactText: offending,
-        ground: `the recorded grant covers [${DEPLOYMENT.subjects.join(', ')}] and [${DEPLOYMENT.sources.join(', ')}] only`,
+        ground: `the recorded grant covers [${deployment.subjects.join(', ')}] and [${deployment.sources.join(', ')}] only`,
         gloss: 'authority is a record, not a request; the wider read never happens'
       },
       climax: true
@@ -362,8 +444,8 @@ export function runCareful(question, draft, rows, opts = {}) {
       checkpoints,
       coverage: null,
       claimsLedger: [],
-      answer: `Declined at scope: this deployment's grant covers ${DEPLOYMENT.subjects.join(', ')} only, and ${offending} sits outside it. Nothing was read.`,
-      disposition: { disposition: 'refused', pathToYes: `scope the request to ${DEPLOYMENT.subjects.join(', ')}, then re-run` },
+      answer: `Declined at scope: this deployment's grant covers ${deployment.subjects.join(', ')} only, and ${offending} sits outside it. Nothing was read.`,
+      disposition: { disposition: 'refused', pathToYes: `scope the request to ${deployment.subjects.join(', ')}, then re-run` },
       quarantined,
       notes
     };
@@ -371,7 +453,7 @@ export function runCareful(question, draft, rows, opts = {}) {
   checkpoints.push({
     station: 'SCOPE',
     status: 'pass',
-    detail: `accepted · in scope [${DEPLOYMENT.subjects.join(', ')}]`,
+    detail: `accepted · in scope [${deployment.subjects.join(', ')}]`,
     chapter: CHAPTER.SCOPE
   });
 
@@ -380,7 +462,7 @@ export function runCareful(question, draft, rows, opts = {}) {
   // recorded only if a declared op covers it without certifying, and
   // unregistered otherwise. Anything the registry cannot back, this build
   // will not invent.
-  const ops = DEPLOYMENT.ops;
+  const ops = deployment.ops;
   const executable = draft.asks.filter((a) => opFor(ops, a)?.certifies === true);
   const unregistered = draft.asks.filter((a) => opFor(ops, a) == null);
   if (unregistered.length > 0) {
@@ -464,7 +546,7 @@ export function runCareful(question, draft, rows, opts = {}) {
   if (executable.length > 0 && read.top) {
     if (forgedCount != null && forgedCount !== read.top.n) {
       claimsLedger.push({
-        assertion: `most frequent payee this quarter: ${read.top.name} (${forgedCount} payments)`,
+        assertion: rankedClaim(deployment, draft.window, { name: read.top.name, n: forgedCount }, 'complete'),
         coverageClaimed: 'complete',
         outcome: 'struck',
         failingCheck: `the loop counted ${read.top.n} for ${read.top.name}; the proposal says ${forgedCount}`
@@ -472,15 +554,15 @@ export function runCareful(question, draft, rows, opts = {}) {
     }
     if (capApplied) {
       claimsLedger.push({
-        assertion: `most frequent payee this quarter: ${read.top.name} (${read.top.n} payments)`,
+        assertion: rankedClaim(deployment, draft.window, read.top, 'complete'),
         coverageClaimed: 'complete',
         outcome: 'struck',
         failingCheck: 'unqualified ranking over a partial read; certify the qualified form instead'
       });
-      certifiedAnswer = `most frequent payee within the examined rows: ${read.top.name} (${read.top.n} of the rows read)`;
+      certifiedAnswer = rankedClaim(deployment, draft.window, read.top, 'partial');
       claimsLedger.push({ assertion: certifiedAnswer, coverageClaimed: 'partial', outcome: 'certified' });
     } else {
-      certifiedAnswer = `most frequent payee this quarter: ${read.top.name} (${read.top.n} payments)`;
+      certifiedAnswer = rankedClaim(deployment, draft.window, read.top, 'complete');
       claimsLedger.push({ assertion: certifiedAnswer, coverageClaimed: 'complete', outcome: 'certified' });
     }
   }
@@ -509,10 +591,12 @@ export function runCareful(question, draft, rows, opts = {}) {
       : {})
   });
 
-  if (draft.asks.some((a) => a.kind === 'presence')) {
-    notes.push(
-      'the presence ask is recorded, but nothing registered can certify "never paid before"; it stays silent instead of guessing'
-    );
+  for (const a of draft.asks) {
+    if (opFor(ops, a)?.certifies === false) {
+      notes.push(
+        `the ${a.kind} ask is recorded, but no registered operation certifies it; it stays silent instead of guessing`
+      );
+    }
   }
 
   // ANSWER - dispose: answered, degraded, or an honest cannot-execute
@@ -521,8 +605,9 @@ export function runCareful(question, draft, rows, opts = {}) {
   let answer;
   if (certifiedAnswer == null) {
     disposition = { disposition: 'cannot-execute', pathToYes: 'ask for the nearest thing this build CAN check' };
+    const certifying = ops.filter((o) => o.certifies).map((o) => o.label ?? `${o.kind}${o.direction ? ` (${o.direction})` : ''}`);
     answer =
-      'declined, not guessed: this build can rank most-frequent only; it has no approved way to establish what was asked, so it declines instead of answering a different question.';
+      `declined, not guessed: this build can ${certifying.length > 0 ? `${certifying.join(', ')} only` : 'certify nothing'}; it has no approved way to establish what was asked, so it declines instead of answering a different question.`;
     checkpoints.push({
       station: 'ANSWER',
       status: 'warn',

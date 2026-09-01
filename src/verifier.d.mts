@@ -65,6 +65,8 @@ export interface RunOptions {
   read?: ReadRecord | null;
   /** how this reading was admitted; recorded verbatim at the gate */
   standing?: string;
+  /** defaults to DEPLOYMENT, the recorded payments deployment */
+  deployment?: Deployment;
 }
 
 export interface RunResult {
@@ -96,15 +98,23 @@ export interface RegisteredOp {
   direction?: string;
   /** false = the ask is recorded, but no operation certifies a claim from it */
   certifies: boolean;
+  /** how a refusal names this operation, e.g. "rank most-frequent" */
+  label?: string;
 }
 
+/** What a build may touch, what it can do, and what its claims are about.
+ * Pass one to runCareful to run the same stations in another domain. */
 export interface Deployment {
-  clock: string;
+  clock?: string;
   subjects: string[];
   sources: string[];
   askKinds: string[];
-  cap: number;
+  cap?: number;
+  /** the window this build's records cover, and the requester's word for it;
+   * the label is used only for exactly this window */
+  window?: { from: string; to: string; label: string };
   ops: RegisteredOp[];
+  vocabulary: { entity: string; unit: string };
 }
 
 export declare const DEPLOYMENT: Deployment;
@@ -119,7 +129,8 @@ export declare function computeRead(
 ): ReadModel;
 export declare function validateDraft(
   draft: unknown,
-  question: string
+  question: string,
+  deployment?: Deployment
 ): { verdict: 'accepted' | 'rejected'; reason?: string };
 export declare function runCareful(
   question: string,

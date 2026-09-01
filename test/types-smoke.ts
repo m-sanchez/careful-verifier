@@ -8,7 +8,7 @@ import {
   runCareful,
   validateDraft
 } from '../src/verifier.mjs';
-import type { Draft, RunResult } from '../src/verifier.mjs';
+import type { Deployment, Draft, RunResult } from '../src/verifier.mjs';
 
 const rows = parseLedger(extractLedgerCsv('q\n\nPAYMENT DATA:\n2025-01-01,x'));
 const read = computeRead(rows, { from: '2025-01-01', to: '2025-02-01' }, DEPLOYMENT.cap);
@@ -33,3 +33,14 @@ void partial.complete;
 void runCareful('q', draft, rows, { read: { itemsRead: 500, populationCount: 1310 } });
 void DEPLOYMENT.ops[0].certifies;
 void runCareful('q', draft, rows, { standing: 'requester-confirmed' });
+
+// the deployment is an input: same stations, another domain
+const desk: Deployment = {
+  subjects: ['queue-north'],
+  sources: ['tickets'],
+  askKinds: ['ranking'],
+  ops: [{ kind: 'ranking', direction: 'most', certifies: true, label: 'rank most-frequent' }],
+  vocabulary: { entity: 'requester', unit: 'tickets' }
+};
+void runCareful('q', draft, rows, { deployment: desk });
+void validateDraft(draft, 'q', desk);
