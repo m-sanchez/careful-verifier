@@ -15,6 +15,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm ci
+      - run: npm run build
       - run: npm test
       - run: npm run typecheck
         if: matrix.node != 18
@@ -23,5 +24,38 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/scratch" && cd "$RUNNER_TEMP/scratch"
           npm init -y > /dev/null
-          npm install "$GITHUB_WORKSPACE"/m-sanchez-careful-verifier-*.tgz
-          node -e "import('@m-sanchez/careful-verifier').then(m => { if (!m.runCareful) throw new Error('runCareful missing'); console.log('import ok'); })"
+          npm install "$GITHUB_WORKSPACE"/m-sanchez-careful-verifier-*.tgz happy-dom@^15.11.7
+          node -e "import('@m-sanchez/careful-verifier').then(m => { if (!m.runCareful) throw new Error('runCareful missing'); console.log('root import ok'); })"
+      - name: the packed bench mounts and catches, in a DOM
+        run: |
+          cd "$RUNNER_TEMP/scratch"
+          cat > bench-proof.mjs <<'PROOF'
+          import assert from 'node:assert/strict';
+          import { Window } from 'happy-dom';
+          import { parseLedger } from '@m-sanchez/careful-verifier';
+          import { mountBench, carefulVerify, CAREFUL_TAMPERS } from '@m-sanchez/careful-verifier/bench';
+
+          const question = 'Who has this account paid most often this quarter?';
+          const rows = parseLedger('2025-04-01,Alder Logistics\n2025-04-02,Marram Freight\n2025-04-03,Marram Freight');
+          const window = new Window();
+          const container = window.document.createElement('div');
+          window.document.body.appendChild(container);
+          mountBench(container, {
+            baseline: {
+              subjects: ['acct-1187'],
+              sources: ['payments'],
+              window: { from: '2025-04-01', to: '2025-07-04', origin: 'stated' },
+              asks: [{ kind: 'ranking', direction: 'most', sourceSpan: question, resolution: { state: 'resolved' } }],
+              unclaimedText: []
+            },
+            verify: carefulVerify(question, rows),
+            tampers: CAREFUL_TAMPERS
+          });
+          container.querySelector('[data-tamper="widen-subject"]').click();
+          container.querySelector('.tb-run').click();
+          const rail = Array.from(container.querySelectorAll('.tb-checkpoint')).map((li) => li.textContent);
+          assert.ok(rail.some((line) => line.includes('SCOPE: stop')), rail.join(' | '));
+          assert.ok(!container.textContent.includes('undefined'));
+          console.log('bench proof ok:', rail.join(' | '));
+          PROOF
+          node bench-proof.mjs

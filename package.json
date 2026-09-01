@@ -20,10 +20,11 @@
   },
   "files": [
     "src",
-    "dist"
+    "dist",
+    "examples"
   ],
   "scripts": {
-    "test": "npm run build && node --test test/verifier.test.mjs test/coverage.test.mjs test/parity.test.mjs test/deployment.test.mjs test/browser-safety.test.mjs test/bench.test.mjs test/bench-dom.test.mjs test/bench-honesty.test.mjs",
+    "test": "npm run build && node --test test/verifier.test.mjs test/coverage.test.mjs test/parity.test.mjs test/deployment.test.mjs test/browser-safety.test.mjs test/bench.test.mjs test/bench-dom.test.mjs test/bench-honesty.test.mjs test/bench-careful.test.mjs test/example.test.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.build.json",
     "prepare": "npm run build"

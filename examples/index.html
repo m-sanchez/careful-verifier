@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>careful-verifier · tamper bench</title>
+    <style>
+      /* The package injects no styles: these are the tb-* class hooks a host
+         page is expected to own. Everything here is the host's, not the
+         widget's. */
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0 auto; padding: 2rem 1.25rem; max-width: 46rem;
+        font: 16px/1.55 ui-serif, Georgia, serif;
+      }
+      h1 { font-size: 1.4rem; margin: 0 0 .25rem; }
+      p.lede { margin: 0 0 1.5rem; opacity: .8; }
+      .tb-title { font-size: 1.05rem; margin: 0 0 .6rem; }
+      .tb-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+      .tb-chip {
+        font: inherit; font-size: .85rem; cursor: pointer;
+        padding: .3rem .7rem; border: 1px solid currentColor; border-radius: 999px;
+        background: transparent; color: inherit;
+      }
+      .tb-chip-reset { opacity: .6; }
+      .tb-editor {
+        width: 100%; box-sizing: border-box; font: 13px/1.5 ui-monospace, monospace;
+        padding: .6rem; border: 1px solid rgba(128,128,128,.5); border-radius: 6px;
+      }
+      .tb-run { font: inherit; cursor: pointer; margin: .6rem 0; padding: .4rem 1rem; }
+      .tb-status { font-size: .85rem; opacity: .75; margin-bottom: .5rem; }
+      .tb-rail, .tb-log { list-style: none; padding: 0; margin: 0 0 .75rem; }
+      .tb-rail li, .tb-log li {
+        font: 13px/1.6 ui-monospace, monospace;
+        padding: .25rem .6rem; border-left: 3px solid transparent;
+      }
+      .tb-pass { border-left-color: #4b7f52; }
+      .tb-warn { border-left-color: #b45309; }
+      .tb-stop { border-left-color: #a33; }
+      .tb-outcome { font-weight: 600; margin: .5rem 0 1.25rem; }
+      .tb-log-summary { font-size: .85rem; opacity: .75; margin: 0 0 .3rem; }
+    </style>
+  </head>
+  <body>
+    <h1>careful-verifier · tamper bench</h1>
+    <p class="lede">
+      Mutate the draft, then run the verifier. Nothing leaves the page: the
+      draft, the ledger and the checks are all here. Every attempt is logged
+      with exactly what produced it.
+    </p>
+    <div id="bench"></div>
+    <script type="module" src="./demo.mjs"></script>
+  </body>
+</html>
