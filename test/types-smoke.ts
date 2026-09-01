@@ -24,3 +24,11 @@ const v: { verdict: 'accepted' | 'rejected' } = validateDraft(draft, 'q');
 void read.top;
 void result.claimsLedger;
 void v;
+
+// declared coverage: the rows handed in need not be the population
+const partial = computeRead(rows, { from: '2025-01-01', to: '2025-02-01' }, null, {
+  populationCount: 1310
+});
+void partial.complete;
+void runCareful('q', draft, rows, { read: { itemsRead: 500, populationCount: 1310 } });
+void DEPLOYMENT.ops[0].certifies;

@@ -50,9 +50,19 @@ export interface LedgerClaim {
   failingCheck?: string;
 }
 
+/** The coverage a caller can vouch for when the rows handed in are not the
+ * whole population (pagination, sampling, a pre-filter). */
+export interface ReadRecord {
+  /** rows the read touched; defaults to the rows counted here */
+  itemsRead?: number;
+  /** rows that exist in the window - may exceed the rows handed in */
+  populationCount: number;
+}
+
 export interface RunOptions {
   cap?: number | null;
   forgedCount?: number | null;
+  read?: ReadRecord | null;
 }
 
 export interface RunResult {
@@ -79,20 +89,31 @@ export interface ReadModel {
   seenBefore: string[];
 }
 
-export declare const DEPLOYMENT: {
+export interface RegisteredOp {
+  kind: string;
+  direction?: string;
+  /** false = the ask is recorded, but no operation certifies a claim from it */
+  certifies: boolean;
+}
+
+export interface Deployment {
   clock: string;
   subjects: string[];
   sources: string[];
   askKinds: string[];
   cap: number;
-};
+  ops: RegisteredOp[];
+}
+
+export declare const DEPLOYMENT: Deployment;
 
 export declare function extractLedgerCsv(userMessage: string): string;
 export declare function parseLedger(csv: string): LedgerRow[];
 export declare function computeRead(
   rows: LedgerRow[],
   window: { from: string; to: string },
-  cap?: number | null
+  cap?: number | null,
+  declared?: ReadRecord | null
 ): ReadModel;
 export declare function validateDraft(
   draft: unknown,

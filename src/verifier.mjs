@@ -19,7 +19,8 @@
  * @typedef {{ kind: string, artifactText: string, ground: string, gloss: string }} Catch
  * @typedef {{ station: string, status: 'pass' | 'warn' | 'stop', detail: string, chapter?: string, catch?: Catch, climax?: boolean }} Checkpoint
  * @typedef {{ assertion: string, coverageClaimed: 'complete' | 'partial', outcome: 'certified' | 'struck', failingCheck?: string }} LedgerClaim
- * @typedef {{ cap?: number | null, forgedCount?: number | null }} RunOptions
+ * @typedef {{ itemsRead?: number, populationCount: number }} ReadRecord
+ * @typedef {{ cap?: number | null, forgedCount?: number | null, read?: ReadRecord | null }} RunOptions
  * @typedef {{
  *   attempt: { verdict: 'accepted' | 'rejected', reason?: string },
  *   contract: Draft | null,
@@ -39,8 +40,26 @@ export const DEPLOYMENT = {
   subjects: ['acct-1187'],
   sources: ['payments'],
   askKinds: ['total', 'ranking', 'presence', 'first-appearance'],
-  cap: 500
+  cap: 500,
+  /** The registry, declared: what this build can do, and whether doing it
+   * certifies a claim. `certifies: false` means the ask is recorded and
+   * nothing more - the run may not speak it. Anything absent is capability
+   * this build does not have and will not invent. */
+  ops: [
+    { kind: 'ranking', direction: 'most', certifies: true },
+    { kind: 'presence', certifies: false }
+  ]
 };
+
+/**
+ * Which declared operation, if any, covers an ask. An op with no direction
+ * covers every direction of its kind.
+ * @param {{ kind: string, direction?: string, certifies: boolean }[]} ops
+ * @param {Ask} ask
+ */
+function opFor(ops, ask) {
+  return ops.find((o) => o.kind === ask.kind && (o.direction == null || o.direction === ask.direction)) ?? null;
+}
 
 const CHAPTER = {
   VALIDATOR: 'ch. 3-4',
@@ -90,13 +109,45 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  * Count what a read of the ledger actually establishes: external frequency
  * over the rows read, in-window population, and (from the full file, for the
  * answer key) which external parties are genuinely new to the window.
+ *
+ * Coverage is a *declared* record, not an inference from however many rows
+ * the caller happened to pass. Without `declared`, the rows handed in are
+ * taken to be the whole in-window population - true for a caller that reads
+ * the file, false for anyone who paginates, samples or pre-filters. Those
+ * callers declare `{ populationCount }` (optionally `{ itemsRead }`) and the
+ * read is stamped partial even though every row it was given was counted.
  * @param {LedgerRow[]} rows
  * @param {{ from: string, to: string }} window
  * @param {number | null} [cap] rows the read may touch, file order; null = all
+ * @param {ReadRecord | null} [declared] the coverage the caller can vouch for
  */
-export function computeRead(rows, window, cap = null) {
+export function computeRead(rows, window, cap = null, declared = null) {
   const inWindow = rows.filter((r) => r.date >= window.from && r.date <= window.to);
   const read = cap != null ? inWindow.slice(0, cap) : inWindow;
+  const counted = read.length;
+  let itemsRead = counted;
+  let populationCount = inWindow.length;
+  if (declared != null) {
+    const whole = (/** @type {unknown} */ n) => typeof n === 'number' && Number.isInteger(n) && n >= 0;
+    if (!whole(declared.populationCount)) {
+      throw new Error('declared read: populationCount must be a whole number of rows');
+    }
+    if (declared.itemsRead != null) {
+      if (!whole(declared.itemsRead)) throw new Error('declared read: itemsRead must be a whole number of rows');
+      if (declared.itemsRead < counted) {
+        throw new Error(
+          `declared read: itemsRead ${declared.itemsRead} is below the ${counted} rows counted; a read cannot claim less coverage than it used`
+        );
+      }
+      itemsRead = declared.itemsRead;
+    }
+    if (declared.populationCount < itemsRead) {
+      throw new Error(
+        `declared read: populationCount ${declared.populationCount} is below the ${itemsRead} rows read`
+      );
+    }
+    populationCount = declared.populationCount;
+  }
   /** @type {Map<string, number>} */
   const external = new Map();
   for (const r of read) {
@@ -123,9 +174,9 @@ export function computeRead(rows, window, cap = null) {
     .sort();
   return {
     rowsTotal: rows.length,
-    populationCount: inWindow.length,
-    itemsRead: read.length,
-    complete: read.length >= inWindow.length,
+    populationCount,
+    itemsRead,
+    complete: itemsRead >= populationCount,
     counts,
     top: counts[0] ?? null,
     least: counts.length > 0 ? counts[counts.length - 1] : null,
@@ -204,6 +255,7 @@ function askLabel(a) {
 export function runCareful(question, draft, rows, opts = {}) {
   const cap = opts.cap ?? null;
   const forgedCount = opts.forgedCount ?? null;
+  const declaredRead = opts.read ?? null;
   /** @type {Checkpoint[]} */
   const checkpoints = [];
   /** @type {string[]} */
@@ -317,12 +369,14 @@ export function runCareful(question, draft, rows, opts = {}) {
     chapter: CHAPTER.SCOPE
   });
 
-  // REGISTRY - this build ranks most-frequent and records presence asks;
-  // anything else is capability it does not have and will not invent
-  const executable = draft.asks.filter((a) => a.kind === 'ranking' && a.direction === 'most');
-  const unregistered = draft.asks.filter(
-    (a) => (a.kind === 'ranking' && a.direction !== 'most') || a.kind === 'total' || a.kind === 'first-appearance'
-  );
+  // REGISTRY - capability is the declared record, read here rather than
+  // re-enumerated: an ask is executable only if a declared op certifies it,
+  // recorded only if a declared op covers it without certifying, and
+  // unregistered otherwise. Anything the registry cannot back, this build
+  // will not invent.
+  const ops = DEPLOYMENT.ops;
+  const executable = draft.asks.filter((a) => opFor(ops, a)?.certifies === true);
+  const unregistered = draft.asks.filter((a) => opFor(ops, a) == null);
   if (unregistered.length > 0) {
     const first = unregistered[0];
     const ground =
@@ -342,6 +396,24 @@ export function runCareful(question, draft, rows, opts = {}) {
       },
       climax: true
     });
+  } else if (executable.length === 0) {
+    // every ask is registered, but only for the record: nothing here can
+    // certify a claim, and the checkpoint has to say so rather than stamp a
+    // pass the disposition is about to contradict
+    const first = draft.asks[0];
+    checkpoints.push({
+      station: 'REGISTRY',
+      status: 'warn',
+      detail: `cannot-execute: ${draft.asks.length} ask(s) are recorded only; no registered operation certifies one`,
+      chapter: CHAPTER.REGISTRY,
+      catch: {
+        kind: 'refusal',
+        artifactText: askLabel(first),
+        ground: `"${first.kind}" is recorded in this build, but no registered operation certifies it`,
+        gloss: 'capability is a record; honest refusal beats invented ability'
+      },
+      climax: true
+    });
   } else {
     checkpoints.push({
       station: 'REGISTRY',
@@ -352,8 +424,8 @@ export function runCareful(question, draft, rows, opts = {}) {
   }
 
   // EVIDENCE - the counting loop; every row it touches is stamped
-  const read = computeRead(rows, draft.window, cap);
-  const capApplied = cap != null && read.itemsRead < read.populationCount;
+  const read = computeRead(rows, draft.window, cap, declaredRead);
+  const capApplied = !read.complete;
   checkpoints.push({
     station: 'EVIDENCE',
     status: capApplied ? 'warn' : 'pass',
@@ -366,7 +438,7 @@ export function runCareful(question, draft, rows, opts = {}) {
           catch: {
             kind: 'partial-coverage',
             artifactText: `${read.itemsRead} of ${read.populationCount} rows`,
-            ground: 'read capped',
+            ground: cap != null ? 'read capped' : 'declared partial read',
             gloss: 'claims may only carry the coverage they can support'
           }
         }
@@ -375,7 +447,7 @@ export function runCareful(question, draft, rows, opts = {}) {
   const coverage = {
     itemsRead: read.itemsRead,
     populationCount: read.populationCount,
-    complete: !capApplied,
+    complete: read.complete,
     capApplied
   };
 
