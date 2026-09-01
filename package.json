@@ -1,6 +1,9 @@
 {
-  "name": "careful-verifier",
-  "version": "1.0.1",
+  "name": "@m-sanchez/careful-verifier",
+  "version": "1.0.2",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "Models propose, code certifies. Zero-dependency claim verifier for Node and the browser - no model calls.",
   "type": "module",
   "main": "./src/verifier.mjs",

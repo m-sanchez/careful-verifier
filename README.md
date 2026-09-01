@@ -6,6 +6,7 @@
 ![Dependencies](https://img.shields.io/badge/dependencies-0-B45309)
 [![CI](https://github.com/m-sanchez/careful-verifier/actions/workflows/test.yml/badge.svg)](https://github.com/m-sanchez/careful-verifier/actions/workflows/test.yml)
 ![License](https://img.shields.io/badge/license-MIT-6E6E6E)
+[![npm](https://img.shields.io/npm/v/@m-sanchez/careful-verifier?color=CB3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/@m-sanchez/careful-verifier)
 
 > **In plain English:** a referee that re-checks an AI's work with plain rules and no AI involved, so the checker cannot be fooled the same way the model was.
 
@@ -15,6 +16,9 @@ the browser. No model calls.
 [Live tamper bench](https://miguelsanchez.co.uk/careful-machine) ·
 [Reference implementation](https://github.com/m-sanchez/careful-machine-reference) ·
 [More tools](https://github.com/m-sanchez)
+
+*Provenance: this came out of one body of production LLM work, extracted and
+generalised into a standalone package. First published 2026-08-31.*
 
 This is the deterministic side of the careful-machine pattern, extracted as a
 library. A model may draft a *reading* of a question; this code decides what
@@ -30,11 +34,12 @@ visitors mutate a model draft in the browser and watch the same code catch it.
 ## Install
 
 ```bash
-npm install github:m-sanchez/careful-verifier#v1.0.1
+npm install @m-sanchez/careful-verifier
 ```
 
-Not yet on npm; the pinned git tag is the supported install (plain
-JavaScript, node 18+) and CI proves the packed tarball imports cleanly.
+Also installable from a pinned git tag (plain JavaScript, node 18+):
+`github:m-sanchez/careful-verifier#v1.0.2`. CI proves the packed tarball
+imports cleanly.
 
 ## Develop
 
@@ -53,7 +58,7 @@ can run it; the in-browser deployment is the live tamper bench.
 ## Use
 
 ```js
-import { runCareful, validateDraft, parseLedger } from 'careful-verifier';
+import { runCareful, validateDraft, parseLedger } from '@m-sanchez/careful-verifier';
 
 const result = runCareful(question, draft, rows, { cap: 500 });
 result.checkpoints;   // each station: pass, warn, or stop - with what it caught
