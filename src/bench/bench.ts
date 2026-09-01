@@ -38,6 +38,40 @@ export interface RunEntry<D> {
   report: Report;
 }
 
+/** A verifier that returns something other than a Report is contained the
+ * same way one that throws is. The widget exists to invite hostile drafts
+ * and arbitrary plug-ins - many of them untyped - so a malformed report is
+ * a finding, not a dead page. Anything unusable becomes the same stop
+ * checkpoint the throw path produces, naming what was wrong with it. */
+export function normalizeReport(value: unknown): Report {
+  const bad = (detail: string): Report => ({
+    checkpoints: [{ label: 'verifier', status: 'stop', detail }],
+    outcome: 'verifier error: this draft found a malformed report, which is a finding too'
+  });
+  if (value === null || typeof value !== 'object') {
+    return bad(`the verifier returned ${value === null ? 'null' : typeof value} instead of a report`);
+  }
+  const raw = value as { checkpoints?: unknown; outcome?: unknown };
+  if (!Array.isArray(raw.checkpoints)) {
+    return bad('the verifier returned a report with no checkpoints array');
+  }
+  const checkpoints: Checkpoint[] = [];
+  for (let i = 0; i < raw.checkpoints.length; i++) {
+    const k = raw.checkpoints[i] as { label?: unknown; status?: unknown; detail?: unknown } | null;
+    if (k === null || typeof k !== 'object') return bad(`checkpoint ${i} is not an object`);
+    if (typeof k.label !== 'string') return bad(`checkpoint ${i} has no label`);
+    if (k.status !== 'pass' && k.status !== 'warn' && k.status !== 'stop') {
+      return bad(`checkpoint ${i} has status ${JSON.stringify(k.status)}, not pass/warn/stop`);
+    }
+    checkpoints.push(
+      typeof k.detail === 'string'
+        ? { label: k.label, status: k.status, detail: k.detail }
+        : { label: k.label, status: k.status }
+    );
+  }
+  return { checkpoints, outcome: typeof raw.outcome === 'string' ? raw.outcome : '' };
+}
+
 export class Bench<D> {
   private readonly config: BenchConfig<D>;
   private readonly cloneOf: (d: D) => D;
@@ -84,12 +118,13 @@ export class Bench<D> {
 
   /** Run the verifier over the current draft. The report is appended to
    * history with exactly what was applied to produce it. A verifier that
-   * throws is contained: the widget exists to invite hostile drafts, so a
-   * crash becomes a stop checkpoint, never a dead page. */
+   * throws is contained, and so is one that returns a shape the renderer
+   * cannot use: the widget exists to invite hostile drafts, so either
+   * becomes a stop checkpoint, never a dead page. */
   run(): RunEntry<D> {
     let report: Report;
     try {
-      report = this.config.verify(this.cloneOf(this.current));
+      report = normalizeReport(this.config.verify(this.cloneOf(this.current)));
     } catch (err) {
       report = {
         checkpoints: [
