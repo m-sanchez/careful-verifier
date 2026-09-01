@@ -20,7 +20,7 @@
  * @typedef {{ station: string, status: 'pass' | 'warn' | 'stop', detail: string, chapter?: string, catch?: Catch, climax?: boolean }} Checkpoint
  * @typedef {{ assertion: string, coverageClaimed: 'complete' | 'partial', outcome: 'certified' | 'struck', failingCheck?: string }} LedgerClaim
  * @typedef {{ itemsRead?: number, populationCount: number }} ReadRecord
- * @typedef {{ cap?: number | null, forgedCount?: number | null, read?: ReadRecord | null }} RunOptions
+ * @typedef {{ cap?: number | null, forgedCount?: number | null, read?: ReadRecord | null, standing?: string }} RunOptions
  * @typedef {{
  *   attempt: { verdict: 'accepted' | 'rejected', reason?: string },
  *   contract: Draft | null,
@@ -256,6 +256,12 @@ export function runCareful(question, draft, rows, opts = {}) {
   const cap = opts.cap ?? null;
   const forgedCount = opts.forgedCount ?? null;
   const declaredRead = opts.read ?? null;
+  // standing is a record of how this reading was admitted, not a literal:
+  // the recorded runs carry both policy-admitted and requester-confirmed
+  const standing = opts.standing ?? 'policy-admitted';
+  if (typeof standing !== 'string' || standing.length === 0) {
+    throw new Error('standing must be a non-empty string naming how the reading was admitted');
+  }
   /** @type {Checkpoint[]} */
   const checkpoints = [];
   /** @type {string[]} */
@@ -328,7 +334,7 @@ export function runCareful(question, draft, rows, opts = {}) {
   checkpoints.push({
     station: 'GATE',
     status: 'pass',
-    detail: 'certified · standing policy-admitted',
+    detail: `certified · standing ${standing}`,
     chapter: CHAPTER.GATE
   });
 

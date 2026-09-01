@@ -63,6 +63,8 @@ export interface RunOptions {
   cap?: number | null;
   forgedCount?: number | null;
   read?: ReadRecord | null;
+  /** how this reading was admitted; recorded verbatim at the gate */
+  standing?: string;
 }
 
 export interface RunResult {

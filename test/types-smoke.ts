@@ -32,3 +32,4 @@ const partial = computeRead(rows, { from: '2025-01-01', to: '2025-02-01' }, null
 void partial.complete;
 void runCareful('q', draft, rows, { read: { itemsRead: 500, populationCount: 1310 } });
 void DEPLOYMENT.ops[0].certifies;
+void runCareful('q', draft, rows, { standing: 'requester-confirmed' });
