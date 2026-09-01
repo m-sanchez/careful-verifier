@@ -1,10 +1,10 @@
 {
   "name": "@m-sanchez/careful-verifier",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "publishConfig": {
     "access": "public"
   },
-  "description": "Models propose, code certifies. Zero-dependency claim verifier for Node and the browser - no model calls.",
+  "description": "Models propose, code certifies. Zero-dependency claim verifier plus an embeddable tamper bench, for Node and the browser - no model calls.",
   "type": "module",
   "main": "./src/verifier.mjs",
   "types": "./src/verifier.d.mts",
@@ -24,7 +24,7 @@
     "examples"
   ],
   "scripts": {
-    "test": "npm run build && node --test test/verifier.test.mjs test/coverage.test.mjs test/parity.test.mjs test/deployment.test.mjs test/browser-safety.test.mjs test/bench.test.mjs test/bench-dom.test.mjs test/bench-honesty.test.mjs test/bench-careful.test.mjs test/example.test.mjs",
+    "test": "npm run build && node --test test/verifier.test.mjs test/coverage.test.mjs test/parity.test.mjs test/deployment.test.mjs test/browser-safety.test.mjs test/bench.test.mjs test/bench-dom.test.mjs test/bench-honesty.test.mjs test/bench-careful.test.mjs test/example.test.mjs test/claims.test.mjs test/claims-map.test.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.build.json",
     "prepare": "npm run build"

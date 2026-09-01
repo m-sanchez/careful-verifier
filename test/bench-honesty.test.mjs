@@ -79,6 +79,26 @@ test('a draft that is not plain JSON is not recorded as a hand edit on every cle
   assert.equal(mounted.bench.history[0].report.outcome, 'clean');
 });
 
+test('a Map in the draft is not a hand edit either', () => {
+  const { mounted, q } = mount({
+    baseline: { seen: new Map([['a', 1]]), count: 1 },
+    verify: countVerify,
+    tampers: []
+  });
+  q('.tb-run').click();
+  assert.deepEqual(mounted.bench.appliedTampers, []);
+});
+
+test('the host page owns the look: no styles are injected', () => {
+  const { container } = mount(forgeConfig());
+  assert.equal(container.querySelectorAll('style').length, 0);
+  assert.equal(container.querySelectorAll('link').length, 0);
+  assert.equal(container.querySelectorAll('[style]').length, 0);
+  for (const el of container.querySelectorAll('*')) {
+    assert.ok(el.className.length > 0 || el.tagName === 'LI', `${el.tagName} carries a class hook`);
+  }
+});
+
 test('the attempt log is rendered, so a visitor sees what they tried', () => {
   const { q, container } = mount(forgeConfig());
   q('.tb-run').click();
