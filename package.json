@@ -12,14 +12,21 @@
     ".": {
       "types": "./src/verifier.d.mts",
       "default": "./src/verifier.mjs"
+    },
+    "./bench": {
+      "types": "./dist/bench/index.d.ts",
+      "default": "./dist/bench/index.js"
     }
   },
   "files": [
-    "src"
+    "src",
+    "dist"
   ],
   "scripts": {
-    "test": "node --test test/verifier.test.mjs test/coverage.test.mjs test/parity.test.mjs test/deployment.test.mjs test/browser-safety.test.mjs",
-    "typecheck": "tsc --noEmit --allowJs --checkJs --target es2022 --module nodenext --strict test/types-smoke.ts"
+    "test": "npm run build && node --test test/verifier.test.mjs test/coverage.test.mjs test/parity.test.mjs test/deployment.test.mjs test/browser-safety.test.mjs test/bench.test.mjs test/bench-dom.test.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -40,6 +47,7 @@
     "node": ">=18"
   },
   "devDependencies": {
+    "happy-dom": "^15.11.7",
     "typescript": "^5.7.0"
   }
 }

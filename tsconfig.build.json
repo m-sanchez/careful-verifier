@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "allowJs": false,
+    "checkJs": false,
+    "rootDir": "src/bench",
+    "outDir": "dist/bench",
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/bench/**/*.ts"]
+}
