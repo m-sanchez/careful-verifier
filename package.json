@@ -34,15 +34,20 @@
     "url": "git+https://github.com/m-sanchez/careful-verifier.git"
   },
   "homepage": "https://miguelsanchez.co.uk/careful-machine",
+  "bugs": {
+    "url": "https://github.com/m-sanchez/careful-verifier/issues"
+  },
   "author": "Miguel Sanchez <contact@miguelsanchez.co.uk>",
   "license": "MIT",
   "keywords": [
     "llm",
     "verification",
     "guardrails",
-    "evals",
+    "hallucination",
     "ai-safety",
-    "deterministic"
+    "deterministic",
+    "evals",
+    "browser"
   ],
   "engines": {
     "node": ">=18"
