@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/scratch" && cd "$RUNNER_TEMP/scratch"
           npm init -y > /dev/null
-          npm install "$GITHUB_WORKSPACE"/m-sanchez-careful-verifier-*.tgz happy-dom@^15.11.7
+          npm install "$GITHUB_WORKSPACE"/m-sanchez-careful-verifier-*.tgz happy-dom@^20.14.5
           node -e "import('@m-sanchez/careful-verifier').then(m => { if (!m.runCareful) throw new Error('runCareful missing'); console.log('root import ok'); })"
       - name: the packed bench mounts and catches, in a DOM
         run: |
